@@ -67,7 +67,7 @@ crypto_edu_app/
 Requiere Python 3.10+.
 
 ```bash
-git clone <URL-DE-TU-REPOSITORIO>
+git clone https://github.com/OrlandoML-sys/crypto_edu_app.git
 cd crypto_edu_app
 python3 -m venv venv
 source venv/bin/activate        # Windows: venv\Scripts\activate
