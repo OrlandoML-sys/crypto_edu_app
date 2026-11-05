@@ -1,0 +1,573 @@
+
+####################################################################################################
+#  1. CIFRADOS SIN USO DE LLAVES
+####################################################################################################
+=== Funcion hash criptografica (SHA-256) ===
+Propiedad proporcionada : Integridad (deteccion de cambios) SI el valor hash llega por un canal/medio confiable; NO proporciona confidencialidad ni autenticacion de origen por si sola.
+-- Entradas --
+   mensaje: 5472616e73666572697220313030207065736f73206120426f622c206375656e...(+12 chars)
+-- Info. PÚBLICA (sí viaja) --
+   huella_sha256: 15485a525dc2b7b498110d10da6dad0dcac0fa3c6428f43a26512b8ba433df6a
+-- Salidas --
+   huella_sha256: 15485a525dc2b7b498110d10da6dad0dcac0fa3c6428f43a26512b8ba433df6a
+   tamano_salida_bits: 256
+-- Recursos --
+   tiempo_ejecucion_ms: 0.0252
+   memoria_pico_python_bytes: 97
+   memoria_nota: Medida solo con tracemalloc (objetos Python); no incluye asignaciones nativas de OpenSSL/libcrypto.
+   tamano_entrada_bytes: 38
+   tamano_salida_bytes: 32
+-- Condiciones de uso --
+   * SHA-256 es resistente a colisiones y a preimagen con el estado del arte actual.
+   * NUNCA debe usarse sola para proteger contrasenas (es demasiado rapida: permite probar miles de millones de intentos por segundo). Usar una KDF (Scrypt/Argon2).
+   * El valor hash debe llegar al receptor por un canal cuya integridad este garantizada de otra forma (ej. HTTPS, o publicado junto con una firma digital).
+
+=== Construccion esponja / XOF (SHAKE-256) ===
+Propiedad proporcionada : Integridad / huella de longitud variable. Sigue sin llave: no da confidencialidad ni autenticacion por si sola. Es la base interna de mecanismos modernos como KMAC o de generadores de mascara.
+-- Entradas --
+   mensaje: 5472616e73666572697220313030207065736f73206120426f622c206375656e...(+12 chars)
+   longitud_salida_pedida_bytes: 32
+-- Componentes --
+   tasa_absorcion/capacidad: fijas por el algoritmo (no configurables por el usuario)
+-- Info. PÚBLICA (sí viaja) --
+   salida_xof: 8755a9eb2b2b433838868c04c34b613f13da3228eec30c441e47264ca6d1b31e
+-- Salidas --
+   salida_xof: 8755a9eb2b2b433838868c04c34b613f13da3228eec30c441e47264ca6d1b31e
+   tamano_salida_bytes: 32
+-- Recursos --
+   tiempo_ejecucion_ms: 0.0128
+   memoria_pico_python_bytes: 97
+   memoria_nota: Medida solo con tracemalloc (objetos Python); no incluye asignaciones nativas de OpenSSL/libcrypto.
+   tamano_entrada_bytes: 38
+   tamano_salida_bytes: 32
+-- Condiciones de uso --
+   * La seguridad contra colisiones de una salida de N bytes es como maximo min(N,32) bytes efectivos de resistencia (para SHAKE-256), por eso para 256 bits de seguridad se piden al menos 32 bytes de salida.
+   * Util para derivar varias subclaves de distinta longitud a partir de un mismo secreto (a diferencia de un hash de salida fija).
+
+####################################################################################################
+#  2. CIFRADOS SIMETRICOS
+####################################################################################################
+=== Cifrado simetrico por bloques (AES-128-CBC) ===
+Propiedad proporcionada : Confidencialidad UNICAMENTE. CBC por si solo NO protege integridad: un atacante puede alterar bytes del cifrado y, salvo que rompa el relleno del ultimo bloque, Bob 'descifrara' datos corruptos sin ninguna alerta.
+-- Entradas --
+   mensaje: 5472616e73666572697220313030207065736f73206120426f622c206375656e...(+12 chars)
+-- Componentes --
+   llave_AES_128: 7cce6d6a0ec1c9d7729299997e29b7e0
+   IV_16B: c99cdd0f1998e95bc21b65a3200316db
+   relleno: PKCS7
+-- Info. SECRETA (no viaja) --
+   llave_AES_128: 7cce6d6a0ec1c9d7729299997e29b7e0
+-- Info. PÚBLICA (sí viaja) --
+   IV_16B: c99cdd0f1998e95bc21b65a3200316db
+   texto_cifrado: cb1ef2896107f90431866409025caf87fa686423f00a2b2d8ebf8d5dfd8173a3...(+32 chars)
+-- Salidas --
+   texto_cifrado: cb1ef2896107f90431866409025caf87fa686423f00a2b2d8ebf8d5dfd8173a3...(+32 chars)
+-- Recursos --
+   tiempo_ejecucion_ms: 0.8179
+   memoria_pico_python_bytes: 6590
+   memoria_nota: Medida solo con tracemalloc (objetos Python); no incluye asignaciones nativas de OpenSSL/libcrypto.
+   tamano_entrada_bytes: 38
+   tamano_salida_bytes: 48
+-- Condiciones de uso --
+   * El IV debe ser impredecible y NUNCA reutilizarse con la misma llave.
+   * La llave debe mantenerse secreta; si Eve la obtiene, pierde toda confidencialidad (ver escenario explicito de fuga de llaves).
+   * NO usar CBC solo para datos donde la integridad importe: combinar con un MAC (Encrypt-then-MAC) o usar un modo AEAD como AES-GCM.
+
+=== Descifrado AES-128-CBC ===
+Propiedad proporcionada : Confidencialidad (si la llave/IV son correctos). SIN garantia de integridad.
+Resultado               : ACEPTADO
+-- Entradas --
+   texto_cifrado: cb1ef2896107f90431866409025caf87fa686423f00a2b2d8ebf8d5dfd8173a3...(+32 chars)
+   IV_16B: c99cdd0f1998e95bc21b65a3200316db
+-- Componentes --
+   llave_AES_128 (privada de Bob, ya compartida): 7cce6d6a0ec1c9d7729299997e29b7e0
+-- Info. SECRETA (no viaja) --
+   llave_AES_128: 7cce6d6a0ec1c9d7729299997e29b7e0
+-- Salidas --
+   mensaje_recuperado: 5472616e73666572697220313030207065736f73206120426f622c206375656e...(+12 chars)
+-- Recursos --
+   tiempo_ejecucion_ms: 0.0322
+   memoria_pico_python_bytes: 984
+   memoria_nota: Medida solo con tracemalloc (objetos Python); no incluye asignaciones nativas de OpenSSL/libcrypto.
+   tamano_entrada_bytes: 48
+
+=== Cifrado por flujo (ChaCha20) ===
+Propiedad proporcionada : Confidencialidad unicamente (como CBC, sin autenticacion). Un cifrado de flujo genera un 'keystream' pseudoaleatorio y lo combina con XOR: cualquier bit que Eve voltee en el cifrado voltea EXACTAMENTE ese mismo bit en el texto claro recuperado, sin error ni aviso.
+-- Entradas --
+   mensaje: 5472616e73666572697220313030207065736f73206120426f622c206375656e...(+12 chars)
+-- Componentes --
+   llave_256bits: bee9cb36eb1b20613d5d8a67ca3b22819922b0910ba2a347f75429a971a13d57
+   nonce_128bits(incluye_contador): 28113bd23d46c58e0e8253d400b8f8a0
+-- Info. SECRETA (no viaja) --
+   llave_256bits: bee9cb36eb1b20613d5d8a67ca3b22819922b0910ba2a347f75429a971a13d57
+-- Info. PÚBLICA (sí viaja) --
+   nonce: 28113bd23d46c58e0e8253d400b8f8a0
+   texto_cifrado: ce331bd3f5dd5068cc219b18934a15ebdfcd10aad01453bf05abfbf6a163fd1b...(+12 chars)
+-- Salidas --
+   texto_cifrado: ce331bd3f5dd5068cc219b18934a15ebdfcd10aad01453bf05abfbf6a163fd1b...(+12 chars)
+-- Recursos --
+   tiempo_ejecucion_ms: 0.0591
+   memoria_pico_python_bytes: 5673
+   memoria_nota: Medida solo con tracemalloc (objetos Python); no incluye asignaciones nativas de OpenSSL/libcrypto.
+   tamano_entrada_bytes: 38
+   tamano_salida_bytes: 38
+-- Condiciones de uso --
+   * El par (llave, nonce) JAMAS debe repetirse: reutilizar un nonce con la misma llave rompe por completo la confidencialidad (permite recuperar el XOR de dos mensajes).
+   * No proporciona integridad: en la practica se usa casi siempre dentro de un AEAD (ChaCha20-Poly1305), nunca 'pelado' como aqui, que es solo con fines didacticos.
+
+=== Descifrado ChaCha20 ===
+Propiedad proporcionada : Confidencialidad. SIN integridad: Bob no tiene forma de saber si el 'mensaje_recuperado' es el original o uno modificado por Eve.
+Resultado               : ACEPTADO
+-- Entradas --
+   texto_cifrado: ce331bd3f5dd5068cc219b18934a15ebdfcd10aad01453bf05abfbf6a163fd1b...(+12 chars)
+   nonce: 28113bd23d46c58e0e8253d400b8f8a0
+-- Componentes --
+   llave_256bits (privada de Bob): bee9cb36eb1b20613d5d8a67ca3b22819922b0910ba2a347f75429a971a13d57
+-- Info. SECRETA (no viaja) --
+   llave_256bits: bee9cb36eb1b20613d5d8a67ca3b22819922b0910ba2a347f75429a971a13d57
+-- Salidas --
+   mensaje_recuperado: 5472616e73666572697220313030207065736f73206120426f622c206375656e...(+12 chars)
+-- Recursos --
+   tiempo_ejecucion_ms: 0.0109
+   memoria_pico_python_bytes: 688
+   memoria_nota: Medida solo con tracemalloc (objetos Python); no incluye asignaciones nativas de OpenSSL/libcrypto.
+   tamano_entrada_bytes: 38
+Notas: ChaCha20 solo nunca rechaza nada: no tiene mecanismo de verificacion. Esa es precisamente la leccion del escenario 'cifrado sin autenticacion'.
+
+=== Cifrado autenticado AES-256-GCM (AEAD) ===
+Propiedad proporcionada : Confidencialidad + Integridad + Autenticacion de origen (si la llave es secreta), todo en una sola operacion (AEAD = Authenticated Encryption with Associated Data).
+-- Entradas --
+   mensaje: 5472616e73666572697220313030207065736f73206120426f622c206375656e...(+12 chars)
+   datos_asociados_AAD: 6375656e74613a303031
+-- Componentes --
+   llave_256bits: 8472d1d5d5018287a2d49fffb887b2b94fc645a978eaf67332e8bb69d08ed42a
+   nonce_96bits: 4ac34ab2790049c0e6b6c8fa
+   etiqueta_autenticacion_128bits: 48df119ab9200cc0f8d439693b8363b0
+-- Info. SECRETA (no viaja) --
+   llave_256bits: 8472d1d5d5018287a2d49fffb887b2b94fc645a978eaf67332e8bb69d08ed42a
+-- Info. PÚBLICA (sí viaja) --
+   nonce: 4ac34ab2790049c0e6b6c8fa
+   texto_cifrado: 83cdc4284ed0216c6bbcbc4199ba51012c6bf592915444eb85648e1df35bc73c...(+12 chars)
+   etiqueta: 48df119ab9200cc0f8d439693b8363b0
+   datos_asociados_AAD: 6375656e74613a303031
+-- Salidas --
+   texto_cifrado: 83cdc4284ed0216c6bbcbc4199ba51012c6bf592915444eb85648e1df35bc73c...(+12 chars)
+   etiqueta: 48df119ab9200cc0f8d439693b8363b0
+-- Recursos --
+   tiempo_ejecucion_ms: 0.0256
+   memoria_pico_python_bytes: 159
+   memoria_nota: Medida solo con tracemalloc (objetos Python); no incluye asignaciones nativas de OpenSSL/libcrypto.
+   tamano_entrada_bytes: 38
+   tamano_salida_bytes: 38
+-- Condiciones de uso --
+   * El nonce de 12 bytes JAMAS debe repetirse con la misma llave: reutilizarlo en GCM es catastrofico (permite falsificar etiquetas y recuperar texto claro).
+   * Los AAD (datos asociados) se autentican pero NO se cifran: usarlos para cabeceras publicas que deban llegar integras (ej. remitente, numero de secuencia).
+   * Cualquier bit modificado en texto_cifrado, nonce o AAD hace que la verificacion falle por completo al descifrar (ver escenario 'cifrado autenticado').
+
+=== Verificacion/Descifrado AES-256-GCM ===
+Propiedad proporcionada : Confidencialidad + Integridad + Autenticacion.
+Resultado               : ACEPTADO
+-- Entradas --
+   texto_cifrado: 83cdc4284ed0216c6bbcbc4199ba51012c6bf592915444eb85648e1df35bc73c...(+12 chars)
+   etiqueta: 48df119ab9200cc0f8d439693b8363b0
+   nonce: 4ac34ab2790049c0e6b6c8fa
+   AAD: 6375656e74613a303031
+-- Componentes --
+   llave_256bits (privada de Bob): 8472d1d5d5018287a2d49fffb887b2b94fc645a978eaf67332e8bb69d08ed42a
+-- Info. SECRETA (no viaja) --
+   llave_256bits: 8472d1d5d5018287a2d49fffb887b2b94fc645a978eaf67332e8bb69d08ed42a
+-- Salidas --
+   mensaje_recuperado: 5472616e73666572697220313030207065736f73206120426f622c206375656e...(+12 chars)
+-- Recursos --
+   tiempo_ejecucion_ms: 0.0084
+   memoria_pico_python_bytes: 230
+   memoria_nota: Medida solo con tracemalloc (objetos Python); no incluye asignaciones nativas de OpenSSL/libcrypto.
+   tamano_entrada_bytes: 38
+
+=== HMAC-SHA256 ===
+Propiedad proporcionada : Integridad + Autenticacion de origen (NO confidencialidad: el mensaje normalmente viaja en claro junto con la etiqueta).
+-- Entradas --
+   mensaje: 5472616e73666572697220313030207065736f73206120426f622c206375656e...(+12 chars)
+-- Componentes --
+   llave_HMAC: d2df3cdda9aacb923ffaaf66c046500701bfcee208352ee6310ce7807f2cb75b
+   etiqueta_32B: fcda5a8bb63b0cabcc92167f38a8477af83833794cfe3dcf5320739e52c1c676
+-- Info. SECRETA (no viaja) --
+   llave_HMAC: d2df3cdda9aacb923ffaaf66c046500701bfcee208352ee6310ce7807f2cb75b
+-- Info. PÚBLICA (sí viaja) --
+   mensaje: 5472616e73666572697220313030207065736f73206120426f622c206375656e...(+12 chars)
+   etiqueta: fcda5a8bb63b0cabcc92167f38a8477af83833794cfe3dcf5320739e52c1c676
+-- Salidas --
+   etiqueta: fcda5a8bb63b0cabcc92167f38a8477af83833794cfe3dcf5320739e52c1c676
+-- Recursos --
+   tiempo_ejecucion_ms: 0.0169
+   memoria_pico_python_bytes: 169
+   memoria_nota: Medida solo con tracemalloc (objetos Python); no incluye asignaciones nativas de OpenSSL/libcrypto.
+   tamano_entrada_bytes: 38
+   tamano_salida_bytes: 32
+-- Condiciones de uso --
+   * La llave debe tener al menos 256 bits de entropia y mantenerse secreta.
+   * Comparar etiquetas con comparacion de tiempo constante (hmac.compare_digest) para evitar ataques de temporizacion.
+   * Si se necesita tambien confidencialidad, combinar con cifrado usando el patron Encrypt-then-MAC (cifrar primero, luego autenticar el cifrado).
+
+=== Verificacion HMAC-SHA256 ===
+Propiedad proporcionada : Integridad + Autenticacion de origen.
+Resultado               : ACEPTADO
+-- Entradas --
+   mensaje_recibido: 5472616e73666572697220313030207065736f73206120426f622c206375656e...(+12 chars)
+   etiqueta_recibida: fcda5a8bb63b0cabcc92167f38a8477af83833794cfe3dcf5320739e52c1c676
+-- Componentes --
+   llave_HMAC (privada de Bob): d2df3cdda9aacb923ffaaf66c046500701bfcee208352ee6310ce7807f2cb75b
+-- Info. SECRETA (no viaja) --
+   llave_HMAC: d2df3cdda9aacb923ffaaf66c046500701bfcee208352ee6310ce7807f2cb75b
+-- Recursos --
+   tiempo_ejecucion_ms: 0.0071
+   memoria_pico_python_bytes: 169
+   memoria_nota: Medida solo con tracemalloc (objetos Python); no incluye asignaciones nativas de OpenSSL/libcrypto.
+   tamano_entrada_bytes: 38
+
+=== CMAC-AES-128 ===
+Propiedad proporcionada : Integridad + Autenticacion de origen (construido a partir de un cifrado por bloques en vez de un hash, a diferencia de HMAC).
+-- Entradas --
+   mensaje: 5472616e73666572697220313030207065736f73206120426f622c206375656e...(+12 chars)
+-- Componentes --
+   llave_AES_128: f08d5837808a510955aa841a8085dad2
+   etiqueta_16B: 84456ecc4e9adeaf7d47a0cd53c7114d
+-- Info. SECRETA (no viaja) --
+   llave_AES_128: f08d5837808a510955aa841a8085dad2
+-- Info. PÚBLICA (sí viaja) --
+   mensaje: 5472616e73666572697220313030207065736f73206120426f622c206375656e...(+12 chars)
+   etiqueta: 84456ecc4e9adeaf7d47a0cd53c7114d
+-- Salidas --
+   etiqueta: 84456ecc4e9adeaf7d47a0cd53c7114d
+-- Recursos --
+   tiempo_ejecucion_ms: 0.0192
+   memoria_pico_python_bytes: 428
+   memoria_nota: Medida solo con tracemalloc (objetos Python); no incluye asignaciones nativas de OpenSSL/libcrypto.
+   tamano_entrada_bytes: 38
+   tamano_salida_bytes: 16
+-- Condiciones de uso --
+   * Util cuando ya se dispone de una implementacion de AES y se prefiere no depender de una funcion hash aparte.
+   * Igual que HMAC: la llave debe ser secreta y la verificacion debe hacerse en tiempo constante.
+
+=== Verificacion CMAC-AES-128 ===
+Propiedad proporcionada : Integridad + Autenticacion de origen.
+Resultado               : ACEPTADO
+-- Entradas --
+   mensaje_recibido: 5472616e73666572697220313030207065736f73206120426f622c206375656e...(+12 chars)
+   etiqueta_recibida: 84456ecc4e9adeaf7d47a0cd53c7114d
+-- Componentes --
+   llave_AES_128 (privada de Bob): f08d5837808a510955aa841a8085dad2
+-- Info. SECRETA (no viaja) --
+   llave_AES_128: f08d5837808a510955aa841a8085dad2
+-- Recursos --
+   tiempo_ejecucion_ms: 0.0059
+   memoria_pico_python_bytes: 352
+   memoria_nota: Medida solo con tracemalloc (objetos Python); no incluye asignaciones nativas de OpenSSL/libcrypto.
+   tamano_entrada_bytes: 38
+
+=== PBKDF2-HMAC-SHA256 ===
+Propiedad proporcionada : Establecimiento de una llave simetrica a partir de una contrasena, encareciendo (con 'iteraciones') los ataques de diccionario/fuerza bruta.
+-- Entradas --
+   contrasena: 504073737730726421
+   iteraciones: 600000
+-- Componentes --
+   sal_16B: 2374b4b91459279e1eaaac3e054f749a
+   iteraciones: 600000
+-- Info. SECRETA (no viaja) --
+   contrasena: 504073737730726421
+   llave_derivada: fea414977c83c99e6916aa3cacca63f0242b0601fed5c54f6b74751effb2464e
+-- Info. PÚBLICA (sí viaja) --
+   sal: 2374b4b91459279e1eaaac3e054f749a
+-- Salidas --
+   llave_derivada: fea414977c83c99e6916aa3cacca63f0242b0601fed5c54f6b74751effb2464e
+-- Recursos --
+   tiempo_ejecucion_ms: 69.9602
+   memoria_pico_python_bytes: 918
+   memoria_nota: Medida solo con tracemalloc (objetos Python); no incluye asignaciones nativas de OpenSSL/libcrypto.
+   tamano_entrada_bytes: 9
+   tamano_salida_bytes: 32
+-- Condiciones de uso --
+   * La sal debe ser aleatoria y distinta por usuario/registro (evita tablas arcoiris).
+   * OWASP 2023+ recomienda >= 600,000 iteraciones para PBKDF2-HMAC-SHA256.
+   * PBKDF2 es barato de acelerar en hardware (GPU/ASIC) comparado con Scrypt/Argon2: preferir estos ultimos cuando sea posible.
+
+=== Scrypt ===
+Propiedad proporcionada : Establecimiento de llave a partir de contrasena, con costo deliberado en TIEMPO *y* MEMORIA (el parametro N obliga a usar ~128*N*r bytes de RAM), lo que encarece mucho los ataques paralelizados en GPU/ASIC frente a PBKDF2.
+-- Entradas --
+   contrasena: 504073737730726421
+   parametros_costo: {'N': 16384, 'r': 8, 'p': 1}
+-- Componentes --
+   sal_16B: d6086308ac94f1d8c4846d859883d6b6
+   N: 16384
+   r: 8
+   p: 1
+-- Info. SECRETA (no viaja) --
+   contrasena: 504073737730726421
+   llave_derivada: d21a0a231c0a6994f5642bd616f91e701e8bfed8817785df8d4c77b493be9f6b
+-- Info. PÚBLICA (sí viaja) --
+   sal: d6086308ac94f1d8c4846d859883d6b6
+-- Salidas --
+   llave_derivada: d21a0a231c0a6994f5642bd616f91e701e8bfed8817785df8d4c77b493be9f6b
+-- Recursos --
+   tiempo_ejecucion_ms: 35.1376
+   memoria_pico_python_bytes: 137
+   memoria_nota: Medida solo con tracemalloc (objetos Python); no incluye asignaciones nativas de OpenSSL/libcrypto.
+   tamano_entrada_bytes: 9
+   tamano_salida_bytes: 32
+-- Condiciones de uso --
+   * N debe ser potencia de 2; valores tipicos interactivos: N=2^14..2^17, r=8, p=1.
+   * Memoria aproximada requerida ~= 128 * N * r bytes (con N=2^14, r=8 son ~16 MB por intento).
+   * Es precisamente ese costo de memoria lo que hace a Scrypt mas caro de atacar que SHA-256 directo o que PBKDF2 con el mismo numero de iteraciones (ver demo de ataque de diccionario).
+
+=== HKDF-SHA256 ===
+Propiedad proporcionada : Expande/'blanquea' un secreto YA aleatorio (p. ej. salida de Diffie-Hellman) en una o varias llaves independientes para distintos usos (cifrado, MAC...).
+-- Entradas --
+   secreto_compartido: 3cdaec167aab77d9448fe25814ea42a80fd3bdab8168cc820f8e6608d01e5a52
+   info_contexto: 736573696f6e
+-- Componentes --
+   sal: c69516352deb3fa9d3890edc5ea9b1bf
+   info: 736573696f6e
+-- Info. SECRETA (no viaja) --
+   secreto_compartido: 3cdaec167aab77d9448fe25814ea42a80fd3bdab8168cc820f8e6608d01e5a52
+   llave_derivada: 795aa41a2b3cd92f127610c211fcbea4fe46de78a6ae1e990cccf2b464126f12
+-- Info. PÚBLICA (sí viaja) --
+   sal: c69516352deb3fa9d3890edc5ea9b1bf
+   info: 736573696f6e
+-- Salidas --
+   llave_derivada: 795aa41a2b3cd92f127610c211fcbea4fe46de78a6ae1e990cccf2b464126f12
+-- Recursos --
+   tiempo_ejecucion_ms: 0.0576
+   memoria_pico_python_bytes: 474
+   memoria_nota: Medida solo con tracemalloc (objetos Python); no incluye asignaciones nativas de OpenSSL/libcrypto.
+   tamano_entrada_bytes: 32
+   tamano_salida_bytes: 32
+-- Condiciones de uso --
+   * NO usar HKDF directamente sobre una contrasena humana: es rapida a proposito, no ofrece ningun costo contra diccionario (para eso esta Scrypt/PBKDF2/Argon2).
+   * Usar un 'info' distinto por cada llave que se derive del mismo secreto, para separar criptograficamente sus usos (ej. 'cifrado' vs 'autenticacion').
+
+####################################################################################################
+#  3. CIFRADOS ASIMETRICOS
+####################################################################################################
+=== Cifrado de clave publica (RSA-2048-OAEP) ===
+Propiedad proporcionada : Confidencialidad: solo quien tiene la llave PRIVADA de Bob puede descifrar. No requiere que Alice y Bob compartan ningun secreto de antemano.
+-- Entradas --
+   mensaje: 5472616e73666572697220313030207065736f73206120426f622c206375656e...(+12 chars)
+-- Componentes --
+   llave_publica_RSA_de_Bob_DER: 30820122300d06092a864886f70d01010105000382010f003082010a02820101...(+524 chars)
+-- Info. PÚBLICA (sí viaja) --
+   llave_publica_de_Bob: 30820122300d06092a864886f70d01010105000382010f003082010a02820101...(+524 chars)
+   texto_cifrado: 397a209093aac2edcdc21748ed76dc35d31914cf8284903a4156844db070c477...(+448 chars)
+-- Salidas --
+   texto_cifrado: 397a209093aac2edcdc21748ed76dc35d31914cf8284903a4156844db070c477...(+448 chars)
+-- Recursos --
+   tiempo_ejecucion_ms: 0.235
+   memoria_pico_python_bytes: 2548
+   memoria_nota: Medida solo con tracemalloc (objetos Python); no incluye asignaciones nativas de OpenSSL/libcrypto.
+   tamano_entrada_bytes: 38
+   tamano_salida_bytes: 256
+-- Condiciones de uso --
+   * RSA-OAEP solo puede cifrar mensajes PEQUENOS (unos 190 bytes con 2048 bits + SHA-256): para mensajes largos se usa 'cifrado hibrido' (RSA cifra una llave simetrica, y esa llave simetrica con AES cifra el mensaje real).
+   * Usar SIEMPRE el relleno OAEP; el relleno 'de libro de texto' (RSA sin relleno) es inseguro.
+   * Es ~1000x mas lento que el cifrado simetrico: no se usa para cifrar datos masivos.
+
+=== Descifrado RSA-2048-OAEP ===
+Propiedad proporcionada : Confidencialidad.
+Resultado               : ACEPTADO
+-- Entradas --
+   texto_cifrado: 397a209093aac2edcdc21748ed76dc35d31914cf8284903a4156844db070c477...(+448 chars)
+-- Componentes --
+   llave_privada_RSA (de Bob, NUNCA sale de Bob): ***oculta***
+-- Info. SECRETA (no viaja) --
+   llave_privada_RSA: ***oculta, solo Bob la tiene***
+-- Salidas --
+   mensaje_recuperado: 5472616e73666572697220313030207065736f73206120426f622c206375656e...(+12 chars)
+-- Recursos --
+   tiempo_ejecucion_ms: 0.5474
+   memoria_pico_python_bytes: 1200
+   memoria_nota: Medida solo con tracemalloc (objetos Python); no incluye asignaciones nativas de OpenSSL/libcrypto.
+   tamano_entrada_bytes: 256
+
+=== Firma digital (ECDSA P-256 + SHA-256) ===
+Propiedad proporcionada : Autenticacion de origen + Integridad + NO-REPUDIO (a diferencia de un MAC, un tercero puede verificar la firma con la llave PUBLICA de Alice sin necesitar ningun secreto compartido, y Alice no puede negar haberla firmado).
+-- Entradas --
+   mensaje: 5472616e73666572697220313030207065736f73206120426f622c206375656e...(+12 chars)
+-- Componentes --
+   llave_privada_de_Alice (NUNCA sale de Alice): ***oculta***
+   firma: 3045022100d639fb08e25c17d73693b7f21d89ade3b641b542b61f3aa3973d25...(+78 chars)
+-- Info. SECRETA (no viaja) --
+   llave_privada_ECDSA: ***oculta, solo Alice la tiene***
+-- Info. PÚBLICA (sí viaja) --
+   mensaje: 5472616e73666572697220313030207065736f73206120426f622c206375656e...(+12 chars)
+   firma: 3045022100d639fb08e25c17d73693b7f21d89ade3b641b542b61f3aa3973d25...(+78 chars)
+-- Salidas --
+   firma: 3045022100d639fb08e25c17d73693b7f21d89ade3b641b542b61f3aa3973d25...(+78 chars)
+-- Recursos --
+   tiempo_ejecucion_ms: 6.8325
+   memoria_pico_python_bytes: 402095
+   memoria_nota: Medida solo con tracemalloc (objetos Python); no incluye asignaciones nativas de OpenSSL/libcrypto.
+   tamano_entrada_bytes: 38
+   tamano_salida_bytes: 71
+-- Condiciones de uso --
+   * La llave privada de firma JAMAS debe salir del firmante ni reutilizarse para otro fin.
+   * El valor aleatorio 'k' interno de ECDSA debe ser unico e impredecible por firma: reutilizar k (o usar un generador debil) PERMITE RECUPERAR LA LLAVE PRIVADA completa.
+   * La llave publica debe distribuirse de forma autenticada (ver PKI), si no Eve puede sustituirla por la suya y firmar mensajes haciendose pasar por Alice.
+
+=== Verificacion de firma ECDSA ===
+Propiedad proporcionada : Autenticacion de origen + Integridad + No-repudio.
+Resultado               : ACEPTADO
+-- Entradas --
+   mensaje_recibido: 5472616e73666572697220313030207065736f73206120426f622c206375656e...(+12 chars)
+   firma_recibida: 3045022100d639fb08e25c17d73693b7f21d89ade3b641b542b61f3aa3973d25...(+78 chars)
+-- Componentes --
+   llave_publica_de_Alice_DER: 3059301306072a8648ce3d020106082a8648ce3d03010703420004477a5b7cda...(+118 chars)
+-- Info. PÚBLICA (sí viaja) --
+   llave_publica_de_Alice: 3059301306072a8648ce3d020106082a8648ce3d03010703420004477a5b7cda...(+118 chars)
+-- Recursos --
+   tiempo_ejecucion_ms: 0.1243
+   memoria_pico_python_bytes: 645
+   memoria_nota: Medida solo con tracemalloc (objetos Python); no incluye asignaciones nativas de OpenSSL/libcrypto.
+   tamano_entrada_bytes: 38
+
+=== Intercambio de llaves Diffie-Hellman sobre curvas elipticas (ECDH) [Alice] ===
+Propiedad proporcionada : Establecimiento de una llave simetrica compartida SIN transmitirla jamas por el canal (ni siquiera cifrada). Solo quienes combinan su llave privada con la publica del otro llegan al mismo secreto.
+-- Componentes --
+   llave_publica_del_otro_participante_DER: 3059301306072a8648ce3d020106082a8648ce3d030107034200049b26cd949c...(+118 chars)
+   mi_llave_privada_efimera: ***oculta, nunca se transmite***
+-- Info. SECRETA (no viaja) --
+   secreto_compartido_crudo: ddfc63918cc1f397446e641e5d91d7c08219ffdb809ebbeae9208c45c35fb169
+   llave_de_sesion_derivada: 84531d82a16acba1686c5ef46868846ffd957ce2a58346105febf83fe6ce88ce
+-- Info. PÚBLICA (sí viaja) --
+   mi_llave_publica_efimera: (se envia al otro participante, ver 'components' del otro lado)
+-- Salidas --
+   llave_de_sesion_derivada: 84531d82a16acba1686c5ef46868846ffd957ce2a58346105febf83fe6ce88ce
+-- Recursos --
+   tiempo_ejecucion_ms: 0.1912
+   memoria_pico_python_bytes: 520
+   memoria_nota: Medida solo con tracemalloc (objetos Python); no incluye asignaciones nativas de OpenSSL/libcrypto.
+   tamano_salida_bytes: 32
+-- Condiciones de uso --
+   * ECDH 'puro' (sin autenticar) es vulnerable a un ataque de intermediario (Man-in-the-Middle): si Eve sustituye las llaves publicas en transito, puede establecer una llave de sesion distinta con Alice y otra con Bob, y quedar en medio relevando/leyendo todo (ver demo).
+   * Para evitarlo, las llaves publicas deben autenticarse (firmarlas, o certificarlas via PKI).
+   * Usar llaves efimeras (una pareja nueva por sesion) da 'forward secrecy': si una llave de sesion se filtra despues, las sesiones pasadas siguen seguras.
+
+=== Intercambio de llaves Diffie-Hellman sobre curvas elipticas (ECDH) [Bob] ===
+Propiedad proporcionada : Establecimiento de una llave simetrica compartida SIN transmitirla jamas por el canal (ni siquiera cifrada). Solo quienes combinan su llave privada con la publica del otro llegan al mismo secreto.
+-- Componentes --
+   llave_publica_del_otro_participante_DER: 3059301306072a8648ce3d020106082a8648ce3d0301070342000472b25d4992...(+118 chars)
+   mi_llave_privada_efimera: ***oculta, nunca se transmite***
+-- Info. SECRETA (no viaja) --
+   secreto_compartido_crudo: ddfc63918cc1f397446e641e5d91d7c08219ffdb809ebbeae9208c45c35fb169
+   llave_de_sesion_derivada: 84531d82a16acba1686c5ef46868846ffd957ce2a58346105febf83fe6ce88ce
+-- Info. PÚBLICA (sí viaja) --
+   mi_llave_publica_efimera: (se envia al otro participante, ver 'components' del otro lado)
+-- Salidas --
+   llave_de_sesion_derivada: 84531d82a16acba1686c5ef46868846ffd957ce2a58346105febf83fe6ce88ce
+-- Recursos --
+   tiempo_ejecucion_ms: 0.0858
+   memoria_pico_python_bytes: 467
+   memoria_nota: Medida solo con tracemalloc (objetos Python); no incluye asignaciones nativas de OpenSSL/libcrypto.
+   tamano_salida_bytes: 32
+-- Condiciones de uso --
+   * ECDH 'puro' (sin autenticar) es vulnerable a un ataque de intermediario (Man-in-the-Middle): si Eve sustituye las llaves publicas en transito, puede establecer una llave de sesion distinta con Alice y otra con Bob, y quedar en medio relevando/leyendo todo (ver demo).
+   * Para evitarlo, las llaves publicas deben autenticarse (firmarlas, o certificarlas via PKI).
+   * Usar llaves efimeras (una pareja nueva por sesion) da 'forward secrecy': si una llave de sesion se filtra despues, las sesiones pasadas siguen seguras.
+
+=== Emision de certificado X.509 ===
+Propiedad proporcionada : Autenticacion de la IDENTIDAD de quien posee la llave publica dentro del certificado, respaldada por la firma de la CA.
+-- Entradas --
+   sujeto: bob@laboratorio.edu
+   CA_emisora: CN=CA de Laboratorio Confiable
+-- Componentes --
+   certificado_X509_DER: 308201433081eaa0030201020214445e9a7da771c4fa9ef860d8e5cf7795349e...(+590 chars)
+   llave_privada_de_la_CA: ***oculta, solo la CA la tiene***
+-- Info. SECRETA (no viaja) --
+   llave_privada_de_la_CA: ***oculta***
+-- Info. PÚBLICA (sí viaja) --
+   certificado: 308201433081eaa0030201020214445e9a7da771c4fa9ef860d8e5cf7795349e...(+590 chars)
+-- Salidas --
+   certificado: <Certificate(subject=<Name(CN=bob@laboratorio.edu)>, ...)>
+-- Recursos --
+   tiempo_ejecucion_ms: 0.2941
+   memoria_pico_python_bytes: 4660
+   memoria_nota: Medida solo con tracemalloc (objetos Python); no incluye asignaciones nativas de OpenSSL/libcrypto.
+   tamano_salida_bytes: 327
+-- Condiciones de uso --
+   * Un certificado solo es tan confiable como la CA que lo firmo y la verificacion de la cadena hasta una CA raiz en el almacen de confianza del verificador.
+   * Debe revisarse vigencia (not_valid_before/after) y, en sistemas reales, revocacion (CRL/OCSP).
+
+=== Verificacion de certificado X.509 (PKI) ===
+Propiedad proporcionada : Autenticacion de identidad, condicionada a la confianza en el emisor.
+Resultado               : ACEPTADO
+-- Entradas --
+   sujeto_del_certificado: CN=bob@laboratorio.edu
+   emisor_declarado: CN=CA de Laboratorio Confiable
+-- Componentes --
+   CAs_confiables_de_Bob: ['CN=CA de Laboratorio Confiable']
+-- Info. PÚBLICA (sí viaja) --
+   certificado: (ver 'inputs')
+-- Recursos --
+   tiempo_ejecucion_ms: 0.161
+   memoria_pico_python_bytes: 2665
+   memoria_nota: Medida solo con tracemalloc (objetos Python); no incluye asignaciones nativas de OpenSSL/libcrypto.
+Notas: Verificado contra: CN=CA de Laboratorio Confiable
+
+####################################################################################################
+#  4. LAS NUEVE DEMOSTRACIONES DE ATAQUE / MANIPULACION (incluye ataque de diccionario)
+####################################################################################################
+Escenario: Contrasena debil (ataque de diccionario contra SHA-256 directo)
+Huella objetivo (SHA-256): 0e44ce7308af2b3de5232e4616403ce7d49ba2aec83f79c196409556422a4927
+Intentos probados: 15/16  |  Tiempo total: 0.008 ms (~0.00056 ms/intento)
+Resultado: CONTRASENA ENCONTRADA -> P@ssw0rd!
+Aprendizaje: Eve NO 'descifro' el hash (SHA-256 no se puede invertir); recreo el mismo calculo que hizo el sistema y comparo resultados. 'Adivinar por fuerza bruta/diccionario' es un ataque totalmente distinto, y mucho mas rapido de ejecutar, a 'romper criptograficamente' el algoritmo.
+------------------------------------------------------------------------------------------
+Escenario: Derivacion de contrasenas (SHA-256 directo vs Scrypt, mismo diccionario de 16 palabras)
+Tiempo total probando el diccionario completo contra SHA-256 directo : 0.006 ms
+Tiempo total probando el diccionario completo contra Scrypt (N=2^14) : 416.776 ms
+Scrypt fue ~64497x mas lento de atacar con el mismo diccionario.
+Aprendizaje: los PARAMETROS DE COSTO (iteraciones en PBKDF2; N,r,p en Scrypt) multiplican directamente el trabajo que Eve debe invertir POR CADA intento del diccionario; con SHA-256 'pelado' ese costo es practicamente nulo.
+------------------------------------------------------------------------------------------
+Escenario: Cifrado SIN autenticacion (AES-CBC)
+Mensaje original            : b'Transferir 100 pesos a Bob, cuenta 001'
+Bob 'descifra' sin error?   : SI (accepted=True)
+Mensaje que Bob obtiene     : b'O\x95\x00\xc6\xab\xd8);\x10m\xd0/\xfc\xf9\xb2\x92eso\x8c a Bob, cuenta 001'
+Aprendizaje: el cifrado por si solo NO garantiza deteccion de modificaciones. Bob no recibe ningun error ni alerta; simplemente obtiene datos distintos a los que Alice envio, y los trata como legitimos a menos que el mensaje tenga ademas un mecanismo de integridad.
+------------------------------------------------------------------------------------------
+Escenario: Cifrado AUTENTICADO (AES-GCM) con el mismo tipo de manipulacion
+Mensaje original          : b'Transferir 100 pesos a Bob, cuenta 001'
+Bob acepta el mensaje?    : NO -> RECHAZADO
+Detalle                   : Etiqueta de autenticacion invalida: el mensaje fue modificado (o la llave/nonce/AAD no coinciden). AES-GCM RECHAZA el mensaje completo; no entrega texto claro parcial.
+Aprendizaje: la verificacion DEBE fallar (y falla) ante cualquier bit alterado del cifrado, del nonce o de los datos asociados. A diferencia de CBC solo, GCM detecta la manipulacion y Bob rechaza el mensaje completo en vez de usar datos corruptos.
+------------------------------------------------------------------------------------------
+Escenario: HMAC/CMAC - Eve modifica el mensaje SIN conocer la llave
+Mensaje original  : b'Orden de compra #4521: 10 unidades'  -> verificacion: ACEPTADO
+Mensaje alterado  : b'Orden de compra #4521: 99 unidades'  -> verificacion: RECHAZADO
+Aprendizaje: sin la llave, Eve no puede recalcular una etiqueta valida para el mensaje modificado; la etiqueta original deja de ser valida y Bob rechaza el mensaje.
+------------------------------------------------------------------------------------------
+Escenario: Firma digital - se modifica un mensaje firmado
+Verificacion con mensaje original : ACEPTADA
+Verificacion con mensaje alterado : RECHAZADA
+Aprendizaje: la firma deja de verificarse ante CUALQUIER cambio en el mensaje, incluso sin conocer la llave privada de Alice; esto se debe a que la firma cubre criptograficamente el contenido completo (via su huella hash).
+------------------------------------------------------------------------------------------
+Escenario: Acuerdo de llaves (ECDH) SIN autenticacion, con Eve sustituyendo valores publicos
+Llave de Alice == llave de Bob (lo que ambos CREEN compartir)?  False
+Llave de Alice == llave que Eve establecio con Alice?            True
+Llave de Bob   == llave que Eve establecio con Bob?              True
+Aprendizaje: Alice y Bob NUNCA llegan a compartir la misma llave entre ellos; cada uno establece, sin saberlo, una llave DISTINTA con Eve. Eve puede descifrar, leer, re-cifrar y reenviar todo el trafico sin que ninguno lo note. Un acuerdo de llaves necesita autenticar a los participantes (firmar las llaves publicas, o usar certificados/PKI) para impedir esto.
+------------------------------------------------------------------------------------------
+Escenario: Repeticion de mensajes (replay) sobre un mensaje autenticado con HMAC
+Etiqueta HMAC del mensaje reenviado sigue siendo valida? SI
+Receptor SIN control de repeticion -> acepta la transferencia repetida? True
+Receptor CON control (numero de secuencia / nonce ya visto) -> 1ra vez: True, 2da vez (repetida): False
+Aprendizaje: la autenticacion por si sola (HMAC, CMAC, firma) prueba que el mensaje es genuino y no fue alterado, pero NO dice nada sobre si ya se proceso antes. Se necesitan controles adicionales (numeros de secuencia, nonces de un solo uso, marcas de tiempo con ventana de validez) para impedir que un mensaje valido capturado se reenvie con exito.
+------------------------------------------------------------------------------------------
+Escenario: PKI - se presenta un certificado de una CA NO confiable
+Certificado emitido por la CA confiable  -> Bob lo acepta? True
+Certificado emitido por la CA del atacante (mismo 'sujeto': bob@servidor.edu) -> Bob lo acepta? False
+Motivo del rechazo: La firma del certificado NO corresponde a ninguna CA del almacen de confianza de Bob. El certificado pudo ser emitido por una CA desconocida/no confiable (p. ej. una CA que Eve controla). Bob debe RECHAZARLO.
+Aprendizaje: aunque el certificado falso tenga el mismo 'nombre' de sujeto y una firma VALIDA (valida respecto a la CA del atacante), el receptor debe rechazarlo porque esa CA no esta en su almacen de confianza. La seguridad de la PKI depende por completo de que lista de CAs decide confiar cada receptor.
+------------------------------------------------------------------------------------------
+
+####################################################################################################
+#  FIN DEL REPORTE
+####################################################################################################
+Para la interfaz interactiva con los paneles de Alice, Bob y Eve, ejecutar:  python3 main.py
